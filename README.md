@@ -23,32 +23,96 @@ Features
 * Localization
 
 
-Installation
+Usage
 ------------
-The distribution contains all the necessary library files in both compressed and uncompressed formats. Modify the parameters in the index.html template example file provided.
+1. Download or clone this repository and open the `index.html` file in any browser.
+2. Enter the server web address in *server* field. (see [Server section](#server))
+3. Enter the image file full address* in *image* field.
+4. Press the *Load* button.
 
+\* If the server is not local then the image file must be uploaded to somewhere accessible by the server.
 
 Server
 ------
 You first must have a working version of the IIPImage server running if you want to use the IIP protocol and features. See http://iipimage.sourceforge.net for details. IIPMooViewer, however, also supports the IIIF protocol if you have an IIIF server, or the Zoomify and Deepzoom protocols if you are unable to install the server or are working in a legacy environment.
 
+**To setup a local server** perform these steps (tested on Ubuntu 20.02):
+
+1. Install `fgcid` module of apache:
+
+```bash
+sudo apt install libapache2-mod-fcgid
+```
+
+2. Then add it to apache:
+
+```bash
+sudo a2enmod fcgid
+```
+
+3. Install `iipimage-server` apache module:
+
+```bash
+sudo apt install iipimage-server
+```
+
+4. Open the `iipimage-server` apache module configuration:
+
+```bash
+sudo gedit /etc/apache2/mods-available/iipsrv.conf
+```
+
+Then paste the following:
+
+```
+# Create a directory for the iipsrv binary
+ScriptAlias /fcgi-bin/ "/usr/lib/iipimage-server/"
+
+# Set the options on that directory
+<Location "/fcgi-bin/">
+   AllowOverride None
+   Options None
+   <IfModule mod_version.c>
+     <IfVersion < 2.4>
+       Order allow,deny
+       Allow from all
+     </IfVersion>
+     <IfVersion >= 2.4>
+       Require all granted
+     </IfVersion>
+   </IfModule>
+
+   # Set the module handler
+   AddHandler fcgid-script .fcgi
+</Location>
+
+# Set our environment variables for the IIP server
+FcgidInitialEnv VERBOSITY "5"
+FcgidInitialEnv LOGFILE "/var/log/iipsrv.log"
+FcgidInitialEnv MAX_IMAGE_CACHE_SIZE "10"
+FcgidInitialEnv JPEG_QUALITY "90"
+FcgidInitialEnv MAX_CVT "5000"
+FcgidInitialEnv MEMCACHED_SERVERS "localhost"
+FcgidInitialEnv CORS *
+
+# Define the idle timeout as unlimited and the number of
+# processes we want
+FcgidIdleTimeout 0
+FcgidMaxProcessesPerClass 1
+```
+
+5. Restart apache:
+
+```bash
+ sudo systemctl restart apache2
+```
+
+6. Check the installation of server by heading to [http://localhost/fcgi-bin/iipsrv.fcgi](http://localhost/fcgi-bin/iipsrv.fcgi). If the server version is shown then the installation was successful.
 
 Images
 ------
 Create a pyramidal tiled TIFF image using VIPS (http://vips.sf.net) or imagemagick. Or JPEG2000 if you have a JPEG2000 enabled IIPImage server.
 
-
-Configuration
--------------
-Now modify the path and image names in the example HTML page provided - index.html - to create a working client :-)
-<pre>
-    var iipmooviewer = new IIPMooViewer( "viewer", {
-	  image: "/path/to/image.tif",
-	  credit: "My Title"
-    });
-</pre>
-
-Note that IIPMooViewer works best when it's in its own page. If you wish to embed it in a page, you may specify any div within your page or alternatively use an `<iframe>` if you wish to keep the IIPMooViewer code separate. Note that to enable fullscreen when using an `<iframe>`, add the `allowFullScreen` attribute to the `<iframe>` tag.
 
 Distribution
 ------------
